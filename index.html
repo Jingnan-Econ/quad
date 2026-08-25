@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Illinois main quad, from lidar</title>
+<link rel="icon" href="data:,">
+<style>
+  :root{
+    --ground:#0E1216; --panel:#171D24; --rule:#28303A;
+    --ink:#E8E4DC; --dim:#96A1AC; --faint:#68727E; --accent:#C9713F;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--ground);color:var(--ink);
+    font:15.5px/1.68 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    display:flex;align-items:center;justify-content:center;padding:44px 22px}
+  main{max-width:620px}
+  .kicker{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:0 0 18px}
+  h1{font-size:clamp(26px,4.4vw,34px);font-weight:600;line-height:1.16;
+    letter-spacing:-.012em;margin:0 0 18px;text-wrap:balance}
+  p{color:var(--dim);margin:0 0 15px}
+  p strong{color:var(--ink);font-weight:600}
+  .go{display:inline-block;margin:18px 0 26px;padding:12px 22px;
+    background:var(--accent);color:#12161B;font-weight:600;font-size:15px;
+    text-decoration:none;border-radius:3px}
+  .go:hover{filter:brightness(1.08)}
+  .go:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+  dl{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;margin:0 0 26px;
+    font-size:13.5px}
+  dt{color:var(--faint);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding-top:3px}
+  dd{margin:0;color:var(--dim)}
+  footer{border-top:1px solid var(--rule);padding-top:16px;font-size:12.5px;
+    color:var(--faint)}
+</style>
+</head>
+<body>
+<main>
+  <p class="kicker">Work in progress</p>
+  <h1>The Illinois main quad, rebuilt from public lidar</h1>
+
+  <p>A 450 by 600 metre crop of the main quad as a <strong>gaussian splat</strong> you
+  can fly around in the browser. The shape of every building, path and tree comes
+  from a public airborne lidar survey rather than from photographs of the site, and
+  the splat is trained on renders of that survey.</p>
+
+  <p>This is the <strong>bird's-eye version</strong>. Drag to orbit, scroll or pinch to
+  zoom, two fingers or right-drag to pan. On a phone it works the same way. It
+  streams about <strong>20 MB</strong> to open and more as you zoom in, so give it a
+  moment on a slow connection.</p>
+
+  <a class="go" href="walk/">Open the quad</a>
+
+  <dl>
+    <dt>Shape</dt><dd>2019 county lidar, 2023 orthoimagery, OpenStreetMap</dd>
+    <dt>Model</dt><dd>17.9 M gaussians, cut into 285 tiles and streamed by distance</dd>
+    <dt>Trained</dt><dd>on 6,202 rendered views, in twenty overlapping pieces</dd>
+  </dl>
+
+  <footer>Fengyuan Zhu, University of Illinois. Every source is public domain or
+  share-alike. Nothing here is a photograph of the site.</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,872 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Walk the Quad</title>
+<link rel="icon" href="data:,">  <!-- no favicon, rather than a 404 for one -->
+<style>
+  :root{
+    --ground:#0E1216; --panel:#171D24; --rule:#28303A;
+    --ink:#E8E4DC; --dim:#96A1AC; --faint:#68727E; --accent:#C9713F;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--ground);color:var(--ink);
+    font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+  /* touch-action:none so a drag is a drag and not the browser scrolling the
+     page under it, which is also what makes this work on a touchscreen */
+  canvas{display:block;width:100vw;height:100vh;cursor:crosshair;touch-action:none}
+  canvas:active{cursor:grabbing}
+  body.overview canvas{cursor:grab}
+  #hud{position:fixed;left:14px;top:14px;background:rgba(16,21,27,.86);
+    border:1px solid var(--rule);border-radius:9px;padding:11px 13px;
+    backdrop-filter:blur(8px);max-width:min(340px,calc(100vw - 28px))}
+  #hud h1{margin:0 0 3px;font-size:14px;font-weight:600}
+  #hud .sub{color:var(--faint);font-size:11.5px;margin-bottom:9px}
+  #stats{font:11.5px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim);
+    font-variant-numeric:tabular-nums}
+  #stats b{color:var(--ink);font-weight:500}
+  body.birdseye #mode{display:none}
+  /* there is no L key on a phone */
+  #index{display:none;width:100%;margin-top:8px;padding:7px 10px;cursor:pointer;
+    background:none;border:1px solid var(--rule);border-radius:6px;color:var(--dim);
+    font:500 12.5px/1.2 inherit}
+  #index:hover,#index:focus-visible{color:var(--ink);border-color:var(--faint);outline:0}
+  body.birdseye #index{display:block}
+  #mode{display:block;width:100%;margin-top:10px;padding:7px 10px;cursor:pointer;
+    background:var(--accent);border:0;border-radius:6px;color:#12161A;
+    font:600 12.5px/1.2 inherit;letter-spacing:.01em}
+  #mode:hover{filter:brightness(1.08)}
+  #mode small{display:block;font-weight:400;opacity:.72;margin-top:2px;font-size:11px}
+  #keys{margin-top:9px;padding-top:8px;border-top:1px solid var(--rule);
+    color:var(--faint);font-size:11.5px}
+  kbd{font:11px ui-monospace,monospace;background:#222A33;border:1px solid var(--rule);
+    border-radius:4px;padding:0 4px;color:var(--dim)}
+  /* Translucent, so the scene assembles behind the bar rather than appearing
+     from nowhere when it reaches the end. Watching it fill in is most of what
+     a progress bar is for. */
+  #load{position:fixed;inset:0;display:grid;place-items:center;
+    background:rgba(14,18,22,.84);backdrop-filter:blur(3px);
+    z-index:9;text-align:center;padding:20px}
+  #lmsg{font-size:14px}
+  #lbar{width:min(320px,70vw);height:4px;background:var(--rule);border-radius:2px;
+    margin:13px auto 0;overflow:hidden}
+  #lbar i{display:block;height:100%;width:0;background:var(--accent);
+    border-radius:2px;transition:width .3s ease}
+  #lnum{color:var(--faint);font-size:11.5px;margin-top:7px;
+    font-variant-numeric:tabular-nums}
+  #lgo{margin-top:15px;padding:6px 14px;cursor:pointer;background:none;
+    border:1px solid var(--rule);border-radius:6px;color:var(--dim);
+    font:inherit;font-size:12.5px;opacity:0;pointer-events:none;
+    transition:opacity .35s}
+  #lgo.on{opacity:1;pointer-events:auto}
+  #lgo:hover{color:var(--ink);border-color:var(--faint)}
+  #err{color:var(--accent);max-width:46ch;margin-top:10px;font-size:13px}
+  #hint{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);
+    background:rgba(16,21,27,.9);border:1px solid var(--rule);border-radius:8px;
+    padding:8px 14px;color:var(--dim);font-size:12.5px}
+  /* the crosshair, and what it is on */
+  #cross{position:fixed;left:50%;top:50%;width:15px;height:15px;margin:-8px 0 0 -8px;
+    pointer-events:none;opacity:.62;display:none}
+  body.walking #cross{display:block}
+  #cross i{position:absolute;background:#fff;box-shadow:0 0 2px rgba(0,0,0,.8)}
+  #cross i:nth-child(1){left:7px;top:0;width:1px;height:5px}
+  #cross i:nth-child(2){left:7px;bottom:0;width:1px;height:5px}
+  #cross i:nth-child(3){top:7px;left:0;height:1px;width:5px}
+  #cross i:nth-child(4){top:7px;right:0;height:1px;width:5px}
+  #look{position:fixed;left:50%;top:calc(50% + 22px);transform:translateX(-50%);
+    pointer-events:none;text-align:center;max-width:min(420px,90vw);
+    text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 10px rgba(0,0,0,.55)}
+  #look .n{font-size:15px;font-weight:600;letter-spacing:.005em}
+  #look .d{font-size:11.5px;color:var(--dim);
+    font-variant-numeric:tabular-nums;margin-top:1px}
+  #look .g{font-size:11px;color:var(--accent);margin-top:3px;opacity:0}
+  #look.can .g{opacity:1}
+  /* the index of named buildings */
+  #places{position:fixed;left:14px;top:14px;bottom:14px;width:min(320px,calc(100vw - 28px));
+    background:rgba(16,21,27,.94);border:1px solid var(--rule);border-radius:9px;
+    backdrop-filter:blur(10px);display:none;flex-direction:column;z-index:6}
+  body.listing #places{display:flex}
+  body.listing #hud{display:none}
+  #places header{padding:11px 13px 9px;border-bottom:1px solid var(--rule)}
+  #places h2{margin:0;font-size:13.5px;font-weight:600}
+  #places .sub{color:var(--faint);font-size:11.5px;margin-top:2px}
+  #plist{overflow-y:auto;padding:5px 0;flex:1;scrollbar-width:thin}
+  #plist button{display:flex;width:100%;gap:9px;align-items:baseline;
+    background:none;border:0;text-align:left;cursor:pointer;color:var(--ink);
+    font:inherit;padding:6px 13px}
+  #plist button:hover,#plist button:focus-visible{background:#1F262F;outline:0}
+  #plist .nm{flex:1;font-size:12.5px;line-height:1.35}
+  #plist .dm{color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums;
+    white-space:nowrap}
+  #places footer{padding:8px 13px;border-top:1px solid var(--rule);
+    color:var(--faint);font-size:11px}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="hud">
+  <h1>Illinois main quad, on foot</h1>
+  <div class="sub">tiled gaussian splat, streamed by distance</div>
+  <div id="stats"></div>
+  <button id="mode" type="button"></button>
+  <button id="index" type="button">Find a building</button>
+  <div id="keys"></div>
+</div>
+<div id="cross"><i></i><i></i><i></i><i></i></div>
+<div id="look"><div class="n"></div><div class="d"></div><div class="g"></div></div>
+<div id="places">
+  <header>
+    <h2>Named buildings on the quad</h2>
+    <div class="sub" id="plisthint">click one to go and stand in front of it</div>
+  </header>
+  <div id="plist"></div>
+  <footer>footprints from the 2019 county lidar, names from OpenStreetMap</footer>
+</div>
+<div id="hint"></div>
+<div id="load"><div>
+  <div id="lmsg">loading the manifest</div>
+  <div id="lbar"><i id="lfill"></i></div>
+  <div id="lnum"></div>
+  <button id="lgo" type="button">walk in now</button>
+  <div id="err"></div>
+</div></div>
+
+<script src="../lib/splat-core.js"></script>
+<script src="../lib/ground.js"></script>
+<script src="controls.js"></script>
+<script>
+const CV = document.getElementById('cv'), LOAD = document.getElementById('load');
+const ERR = document.getElementById('err'), STATS = document.getElementById('stats');
+const HINT = document.getElementById('hint'), MODE = document.getElementById('mode');
+const KEYS = document.getElementById('keys');
+const LOOK = document.getElementById('look'), PLIST = document.getElementById('plist');
+const LMSG = document.getElementById('lmsg'), LNUM = document.getElementById('lnum');
+const LBAR = document.getElementById('lfill'), LGO = document.getElementById('lgo');
+const fail = m => { LOAD.style.display = 'grid'; ERR.textContent = m; };
+
+// ---- how far along the loading is --------------------------------------------
+// Streaming has no single moment called "loaded", but it does have a number:
+// the bytes the streamer is asking for right now. The page can name it exactly
+// rather than estimate it, because a gaussian is 32 bytes and the manifest
+// carries the count for every tile at every level -- so it knows the size of
+// files it has not fetched. That is what makes an honest bar possible.
+//
+// The target is not the whole ladder, which is a gigabyte nobody needs. It is
+// the coarse floor over the whole crop plus detail as far as the draw budget
+// reaches, which is the point at which the picture stops changing.
+let loading = true;
+function enter(){
+  if (!loading) return;
+  loading = false;
+  LOAD.style.display = 'none';
+}
+function updateLoad(){
+  if (!wantBytes) return;
+  const f = Math.min(1, haveBytes / wantBytes);
+  LBAR.style.width = (100 * f).toFixed(1) + '%';
+  LNUM.textContent = `${(haveBytes / 1e6).toFixed(0)} of ` +
+                     `${(wantBytes / 1e6).toFixed(0)} MB`;
+  LMSG.textContent = f < 0.4 ? 'putting the quad together'
+                   : f < 0.9 ? 'sharpening what is near you'
+                   : 'almost there';
+  // There is something to look at long before there is everything, so the way
+  // in opens early. Nobody should be held at a bar over a slow link when the
+  // scene behind it is already a campus.
+  LGO.classList.toggle('on', f > 0.06);
+  if (f >= 0.995) enter();
+}
+LGO.addEventListener('click', enter);
+
+const gl = CV.getContext('webgl2', {antialias:false, alpha:false,
+  premultipliedAlpha:false, powerPreference:'high-performance'});
+if (!gl) fail('This browser has no WebGL2, which the renderer needs.');
+
+const S = window.SplatCore;
+const UP = [0, 0, 1];            // scene frame: z up, checked against the manifest
+
+let R = null, sorter = null, ground = null;
+// ?only=ground draws the procedural ground and not the splats. There is no way
+// to tell a ground that renders black from a ground that is not drawn at all
+// when a million gaussians are painted over it.
+const onlyGround = new URLSearchParams(location.search).get('only') === 'ground';
+// Which tile directory to walk. Two ladders live side by side while one is
+// being judged against the other, and renaming a directory to look at it is a
+// destructive way to ask a question. Sanitised, because it is pasted into a
+// URL: a directory name, not a path.
+const TILES = ((new URLSearchParams(location.search).get('tiles') || 'lod')
+               .match(/^[\w.-]+$/) || ['lod'])[0];
+// What this page is for. The bird's-eye is the deliverable: from up there the
+// model is a campus, and the near field -- a haze of gaussians at eye height,
+// measured and written up in docs/13, not a bug and not fixed -- never comes
+// into frame. `?view=walk` opens the street-level camera anyway, which is how
+// the near field gets looked at while it is being worked on.
+const VIEW = new URLSearchParams(location.search).get('view') === 'walk'
+             ? 'walk' : 'overview';
+try { R = S.createRenderer(gl); } catch (e) { fail('Shader failed: ' + e.message); }
+
+// The camera, the keys and the terrain the walker stands on live in
+// controls.js, so that scripts/web/check_controls.js can drive them without a
+// browser -- there is no browser on the machine this was built on, and the
+// controls shipped broken because nothing here could press a key. What is left
+// in this page is the DOM, the tiles and the frame.
+const C = WalkControls.create({});
+
+// ---- input -------------------------------------------------------------------
+const locked = () => document.pointerLockElement === CV;
+CV.addEventListener('click', () => {
+  if (C.mode !== 'walk' || locked()) return;
+  // A drag ends in a click. Taking the lock at the end of one means the walker
+  // who just turned by dragging is suddenly in a mode they did not ask for,
+  // with the cursor gone.
+  if (dragged > 6) return;
+  // Chrome rejects a lock requested within a second of the last one being
+  // released with Escape, and an unhandled rejection there is a page that
+  // silently stops responding to the mouse.
+  const p = CV.requestPointerLock();
+  if (p && p.catch) p.catch(() => { HINT.textContent = 'drag to look around'; });
+});
+document.addEventListener('pointerlockchange', () => { C.releaseKeys(); paint(); });
+document.addEventListener('pointerlockerror', () => {
+  HINT.textContent = 'this browser would not hold the mouse; drag to look around';
+});
+addEventListener('mousemove', e => { if (locked()) C.look(e.movementX, e.movementY); });
+
+// A drag means something in both modes. In the overview it orbits, or pans
+// with shift or the middle button, and the wheel zooms, the same as web/splat.
+// On foot it turns the camera, which is what makes the page usable without the
+// pointer lock: the lock is refused inside an iframe without allow=
+// "pointer-lock", Chrome refuses one within a second of the last Escape, and a
+// walker who pressed Escape had no way to look around at all. The page has
+// been telling them to "drag instead" since it shipped and nothing was
+// listening.
+// Every pointer currently down, because two of them mean something different
+// from one. A mouse only ever puts one on the glass; a hand puts two, and the
+// second one is the whole of zooming and panning on a phone -- there is no
+// wheel to turn and no shift to hold.
+const pointers = new Map();
+let drag = null, dragged = 0, two = null;
+
+/** the separation and midpoint of the two fingers down */
+function span() {
+  const [a, b] = [...pointers.values()];
+  return {d: Math.hypot(a.x - b.x, a.y - b.y),
+          x: (a.x + b.x) / 2, y: (a.y + b.y) / 2};
+}
+/** whichever gesture the current number of fingers means */
+function regrasp() {
+  if (pointers.size === 2) {
+    drag = null;
+    two = span();
+  } else {
+    two = null;
+    if (pointers.size === 1) {
+      const p = [...pointers.values()][0];
+      // A gesture that started as two fingers and lost one keeps its travel,
+      // so lifting a finger cannot be read as a fresh tap.
+      drag = {x: p.x, y: p.y, pan: p.shift || p.button === 1, moved: drag ? drag.moved : 0};
+    } else {
+      drag = null;
+    }
+  }
+}
+CV.addEventListener('pointerdown', e => {
+  if (C.mode === 'walk' && locked()) return;   // the lock already owns the mouse
+  e.preventDefault();
+  CV.setPointerCapture(e.pointerId);
+  if (!pointers.size) dragged = 0;
+  pointers.set(e.pointerId, {x: e.clientX, y: e.clientY,
+                             shift: e.shiftKey, button: e.button});
+  regrasp();
+});
+// How far the gesture that just ended travelled, which is how the click at the
+// end of a drag is told from a click. Cleared when a gesture starts rather than
+// when one ends, because pointerup and pointercancel can both arrive for the
+// same gesture and whichever ran second would otherwise set it back to zero.
+const endDrag = e => {
+  if (drag) dragged = drag.moved;
+  pointers.delete(e.pointerId);
+  regrasp();
+};
+CV.addEventListener('pointerup', endDrag);
+CV.addEventListener('pointercancel', endDrag);
+CV.addEventListener('pointermove', e => {
+  const p = pointers.get(e.pointerId);
+  if (!p) return;
+  p.x = e.clientX; p.y = e.clientY;
+
+  // Two fingers: pinch to zoom and slide to pan, both at once, which is what a
+  // hand actually does. There is no separate mode and no button to hold.
+  if (two && pointers.size === 2) {
+    const now = span();
+    if (drag) dragged = drag.moved;
+    C.pinch(now.d / (two.d || now.d || 1));
+    C.drag(now.x - two.x, now.y - two.y, true);
+    dragged += Math.abs(now.x - two.x) + Math.abs(now.y - two.y) + 8;
+    two = now;
+    return;
+  }
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  drag.moved += Math.abs(dx) + Math.abs(dy);
+  if (C.mode === 'overview') C.drag(dx, dy, drag.pan);
+  else C.lookDrag(dx, dy);
+  drag.x = e.clientX; drag.y = e.clientY;
+});
+CV.addEventListener('wheel', e => {
+  if (C.mode !== 'overview') return;
+  e.preventDefault();
+  C.zoom(e.deltaY);
+}, {passive:false});
+
+addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;    // leave the browser's own keys alone
+  if (!e.repeat) {
+    // The index and the crosshair belong to the page, not to the camera:
+    // controls.js is driven headlessly by scripts/web/check_controls.js and has
+    // no DOM to open a panel in.
+    if (e.code === 'KeyL') { toggleList(); e.preventDefault(); return; }
+    if (e.code === 'Escape' && document.body.classList.contains('listing')) {
+      toggleList(false); return;
+    }
+    if (e.code === 'KeyE') { travelToCrosshair(); e.preventDefault(); return; }
+  }
+  if (C.keyDown(e.code, e.repeat)) e.preventDefault();
+  paint();
+});
+addEventListener('keyup', e => C.keyUp(e.code));
+// No keyup is delivered for a key that is released while the window is not
+// focused, so anything held during an alt-tab stays held for ever and the
+// camera wanders off by itself. Let go of everything whenever the page stops
+// being the thing the keyboard is talking to.
+addEventListener('blur', () => C.releaseKeys());
+document.addEventListener('visibilitychange', () => { if (document.hidden) C.releaseKeys(); });
+
+document.getElementById('index').addEventListener('click', e => {
+  toggleList(); e.currentTarget.blur();
+});
+MODE.addEventListener('click', () => {
+  C.toggleMode();
+  if (C.mode !== 'walk' && locked()) document.exitPointerLock();
+  MODE.blur();          // else the next space bar presses the button again
+  paint();
+});
+
+// ---- what the crosshair is on, and where the named buildings are -------------
+// The splats cannot be picked: a gaussian cloud has no surface to intersect and
+// no idea what it is a picture of. Both answers come from the same raster the
+// walker collides with, which carries a building id per cell.
+let aim = null, aimAt = 0;
+function updateAim(now){
+  if (C.mode !== 'walk' || !C.hasSolid) { aim = null; LOOK.style.display = 'none'; return; }
+  if (now - aimAt < 90) return;         // a ray march per frame is wasted work
+  aimAt = now;
+  const h = C.lookingAt();
+  aim = (h && h.place) ? h : null;
+  LOOK.style.display = aim ? 'block' : 'none';
+  if (!aim) return;
+  LOOK.querySelector('.n').textContent = aim.name;
+  LOOK.querySelector('.d').textContent =
+    `${aim.dist.toFixed(0)} m away \u00b7 ${aim.place.h.toFixed(0)} m tall`;
+  const can = !!aim.place.stand && aim.dist > 30;
+  LOOK.classList.toggle('can', can);
+  LOOK.querySelector('.g').textContent = can ? 'E to walk up to it' : '';
+}
+function travelToCrosshair(){
+  if (aim && aim.place && C.goTo(aim.place)) { toggleList(false); paint(); }
+}
+
+function toggleList(want){
+  const on = want === undefined ? !document.body.classList.contains('listing') : want;
+  document.body.classList.toggle('listing', on);
+  if (!on) return;
+  if (locked()) document.exitPointerLock();
+  document.getElementById('plisthint').textContent = C.mode === 'overview'
+    ? 'tap one to bring it into view' : 'click one to go and stand in front of it';
+  // sorted by how far away it is from wherever the camera is now, which is the
+  // order someone standing in the quad actually wants
+  PLIST.innerHTML = '';
+  for (const {place, dist} of C.nearby()) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = `<span class="nm"></span><span class="dm">${dist.toFixed(0)} m</span>`;
+    b.querySelector('.nm').textContent = place.name;
+    b.disabled = !place.stand;
+    b.addEventListener('click', () => { C.focus(place); toggleList(false); paint(); });
+    PLIST.appendChild(b);
+  }
+}
+
+// ---- the two modes, as the page says them ------------------------------------
+let painted = '';
+function paint(){
+  const walk = C.mode === 'walk';
+  const key = C.mode + C.fly + locked();
+  if (key === painted) return;       // keydown repeats arrive tens of times a
+  painted = key;                     // second and this rewrites the panel
+  document.body.classList.toggle('overview', !walk);
+  document.body.classList.toggle('walking', walk && C.hasSolid);
+  MODE.innerHTML = walk ? 'See the whole quad<small>overview &middot; M</small>'
+                        : 'Walk in from here<small>street level &middot; M</small>';
+  KEYS.innerHTML = walk
+    ? '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk &middot; ' +
+      '<kbd>shift</kbd> run &middot; <kbd>F</kbd> fly' +
+      (C.fly ? ' &middot; <kbd>space</kbd>/<kbd>C</kbd> rise, fall' : '') +
+      ' &middot; <kbd>R</kbd> back to the middle' +
+      '<br>drag to look, or click to hold the mouse' +
+      (C.places.length ? ' &middot; <kbd>L</kbd> the buildings by name &middot; ' +
+                         '<kbd>E</kbd> walk up to what you are looking at' : '')
+    : 'drag to turn &middot; two fingers or <kbd>shift</kbd>+drag to pan &middot; ' +
+      'pinch or wheel to zoom &middot; <kbd>R</kbd> reframe';
+  HINT.textContent = walk
+    ? (locked() ? '' : 'drag to look around, W A S D to walk')
+    : (document.body.classList.contains('birdseye')
+        ? 'drag to turn the quad \u00b7 pinch or scroll to zoom'
+        : 'drag to turn the quad, wheel to zoom, then walk in wherever you like');
+  HINT.style.display = HINT.textContent ? 'block' : 'none';
+}
+
+// ---- tiles -------------------------------------------------------------------
+let man = null, tiles = [], resident = new Map(), pending = new Set();
+let bytes = null, positions = null, order = null, nRes = 0, dirty = false;
+// what the streamer wants to be holding, and what it has, in bytes. Both are
+// exact rather than estimated: a tile is 32 bytes a gaussian and the manifest
+// carries the count, so the page knows the size of every file it has not
+// fetched yet. That is what makes an honest progress bar possible at all.
+let wantBytes = 0, haveBytes = 0;
+let lastBuild = 0;
+// Gaussians the browser is asked to hold at once. ?budget= overrides it,
+// because the right number is a property of the machine and not of the scene:
+// the cost is one rebuild of a budget*32 byte buffer, on the main thread,
+// whenever a tile lands.
+const budget = (() => {
+  const v = Number(new URLSearchParams(location.search).get('budget'));
+  return Number.isFinite(v) && v >= 100_000 && v <= 20_000_000 ? v : 2_200_000;
+})();
+const INFLIGHT = 24;             // fetches allowed to be outstanding at once
+const REBUILD_MS = 250;          // floor on how often the resident set is rebuilt
+// Bytes of raw tile buffer the browser is asked to hold. A count of tiles was
+// the wrong unit -- 200 tiles at the coarsest level are 2 MB and 200 at the
+// finest are 500 MB -- and it has to sit above what is in reach at once,
+// measured at 188 MB standing on the quad with a 1080p-tall canvas, or the
+// bound fights the streamer instead of trimming along behind it.
+const KEEP_BYTES = 400_000_000;
+
+// ---- the coarse floor --------------------------------------------------------
+// The draw budget spent nearest-first covers about 108 m from the middle of the
+// quad, and beyond that nothing is drawn at all: the picture ends in mid air.
+// That is not a level-of-detail failure, it is arithmetic -- 2.2 M gaussians at
+// the level each distance honestly asks for does not reach the far side of a
+// 450 by 600 m crop.
+//
+// The whole crop at a coarse level is nearly free. Level 4 is 250 k gaussians
+// and 8 MB for all 285 tiles, a ninth of the budget, so holding it under
+// everything buys the entire far field for very little. Take the finest level
+// whose whole-crop cost is still a small share of whatever budget this page was
+// given; at ?budget=250000 nothing qualifies, coarse is null, and the page
+// behaves exactly as it did before.
+const COARSE_SHARE = 0.2;
+let coarse = null;
+function pickCoarse(){
+  for (let L = 0; L < man.levels.length; L++) {
+    const n = tiles.reduce((a, t) => a + t.counts[L], 0);
+    if (n <= budget * COARSE_SHARE) return {level: L, n};
+  }
+  return null;
+}
+function levelFor(dist, focal){
+  // A level of spacing s is honest beyond s*focal/tau. Take the coarsest level
+  // that still is, which is the cheapest one that looks right at this distance.
+  //
+  // The fallback when none of them is honest has to be level 0, the finest
+  // there is, not the last index. Starting from the last index and only moving
+  // down when a level qualifies means that standing next to something -- where
+  // nothing qualifies -- serves the coarsest level in the ladder, which is the
+  // exact opposite of the intent and is what this did until a test walked the
+  // distances and printed them.
+  let best = 0;
+  for (let L = 0; L < man.levels.length; L++) {
+    if (man.levels[L].spacing_m * focal / man.tau_px <= dist) best = L;
+    else break;
+  }
+  return best;
+}
+function distTo(t, p){
+  let s = 0;
+  for (let i = 0; i < 3; i++) {
+    const v = p[i] < t.min[i] ? t.min[i] - p[i] : (p[i] > t.max[i] ? p[i] - t.max[i] : 0);
+    s += v * v;
+  }
+  return Math.sqrt(s);
+}
+/** true when this call started a fetch, which is what the per-frame cap counts */
+function want(t, L, d){
+  const key = t.x + '_' + t.y;
+  const cur = resident.get(key);
+  if (cur && cur.level === L) { cur.used = performance.now(); return false; }
+  const id = key + ':' + L;
+  if (pending.has(id)) return false;
+  pending.add(id);
+  fetchTile(t, L, key, id, d);
+  return true;
+}
+async function fetchTile(t, L, key, id, d){
+  try {
+    const res = await fetch(TILES + '/' + t.files[L]);
+    if (!res.ok) throw new Error(t.files[L] + ': HTTP ' + res.status);
+    const buf = new Uint8Array(await res.arrayBuffer());
+    resident.set(key, {level: L, buf, n: buf.length / 32,
+                       used: performance.now(), dist: d, want: L});
+    dirty = true;
+  } catch (e) {
+    console.warn(e.message);
+  } finally {
+    pending.delete(id);
+  }
+}
+// Resident is every tile ever fetched, not every tile in front of the walker,
+// so walking the whole crop at level 0 accumulates every tile's bytes on the
+// heap whether or not any of them is uploaded. Drop what the walk has left
+// behind, oldest first.
+//
+// Never what is in reach. A tile the camera can still see is one the streamer
+// asks for again on the very next frame, so evicting it is not a saving, it is
+// a download. This held 200 tiles and chose which to drop by `used`, and on
+// foot the streamer reaches 900 m -- every one of the 285 tiles in a 450 by
+// 600 m crop. So it evicted 85 tiles it could see, picked by a timestamp that
+// is noise among tiles that are all wanted every frame (docs/06 F24), and
+// fetched them straight back. Measured standing still on the quad: about 110
+// tiles re-downloaded every 15 seconds, 167 MB a minute, for as long as the
+// page was left open, and the browser check never settled because nothing ever
+// stopped changing.
+//
+// `used` is still the right question here, because here it is only asked
+// whether a tile was wanted recently at all -- which is the one thing it can
+// answer -- and not which of two tiles is nearer.
+function evict(now){
+  let held = 0;
+  for (const r of resident.values()) held += r.buf.length;
+  if (held <= KEEP_BYTES) return;
+  const gone = [...resident.entries()]
+    .filter(([, r]) => r.used < now - 2000)
+    .sort((a, b) => a[1].used - b[1].used);
+  for (const [k, r] of gone) {
+    if (held <= KEEP_BYTES) break;
+    held -= r.buf.length;
+    resident.delete(k);
+    dirty = true;
+  }
+}
+function rebuild(){
+  // Nearest first, because the budget is about what is worth looking at.
+  //
+  // This sorted by `used` -- most recently wanted -- which is a stand-in for
+  // distance only if some tiles are wanted and others are not. Every tile in
+  // reach is wanted every frame, so after a second of standing still all 156 of
+  // them carried timestamps 3.4 ms apart and the order was whatever the map
+  // happened to hold. Measured: 7 of the 20 nearest tiles survived the budget,
+  // and it kept a median distance of 198 m while dropping a median of 139 m.
+  // The ground the walker is standing on was being evicted in favour of the far
+  // side of the quad, which is the opposite of what a budget is for.
+  //
+  // `used` still decides what is dropped off the heap in evict(), which is the
+  // question it can actually answer: a tile nothing has asked for in a while is
+  // one the walk has left behind.
+  //
+  // Sorted after distance: a tile still resident at a much finer level than
+  // this camera asks for. Switching from the walk to the overview leaves a
+  // dozen tiles behind at level 0, fifty thousand gaussians each, and they are
+  // the nearest tiles to the new eye as well -- so nearest-first alone spent
+  // the entire overview budget on eleven tiles of the quad at walking detail
+  // and drew nothing at all of the other 274. They are not dropped, because
+  // until the coarse copy lands they are the only picture of that ground; they
+  // just stop outbidding it. One level of slack, so a tile does not change
+  // rank every time the walker takes a step across a level boundary.
+  const rank = t => (t.want !== undefined && t.level < t.want - 1 ? 1 : 0);
+  const far = t => (t.dist === undefined ? Infinity : t.dist);
+  // Coverage before detail. The far tiles are held at the coarse floor and cost
+  // a ninth of the budget for the whole crop, so taking them first is what
+  // stops the picture ending in mid air at 108 m. Nearest-first on its own
+  // spends the entire budget on the near field and draws nothing past it,
+  // which is a walk down a corridor rather than across a quad.
+  const floor = t => (coarse && t.level >= coarse.level ? 0 : 1);
+  const parts = [...resident.values()]
+    .sort((a, b) => (floor(a) - floor(b)) || (rank(a) - rank(b)) ||
+                    (far(a) - far(b)));
+  let total = 0, keep = [];
+  for (const p of parts) {
+    if (total + p.n > budget) continue;
+    total += p.n; keep.push(p);
+  }
+  bytes = new Uint8Array(total * 32);
+  positions = new Float32Array(total * 3);
+  let o = 0;
+  for (const p of keep) {
+    bytes.set(p.buf, o * 32);
+    const f = new Float32Array(p.buf.buffer, p.buf.byteOffset, p.n * 8);
+    for (let i = 0; i < p.n; i++) {
+      positions[3 * (o + i)] = f[8 * i];
+      positions[3 * (o + i) + 1] = f[8 * i + 1];
+      positions[3 * (o + i) + 2] = f[8 * i + 2];
+    }
+    o += p.n;
+  }
+  nRes = total;
+  R.setData(bytes, total);
+  sorter.setPositions(positions.slice());
+  dirty = false;
+}
+
+// ---- frame -------------------------------------------------------------------
+let W = 0, H = 0, last = performance.now(), sorting = false, frames = 0, fps = 0, tLast = 0;
+// A ladder of spacing s is honest beyond s*focal/tau, and focal is the canvas
+// height, so this is not a constant and cannot be read off once.
+function setNearest(){
+  if (!man || !man.levels || !man.levels.length || !H) return;
+  const focal = H / (2 * Math.tan(C.FOV * Math.PI / 360));
+  C.setNearest(man.levels[0].spacing_m * focal / man.tau_px);
+}
+function resize(){
+  const dpr = Math.min(devicePixelRatio || 1, 1.5);
+  W = Math.floor(innerWidth * dpr); H = Math.floor(innerHeight * dpr);
+  CV.width = W; CV.height = H;
+  // the overview frames the crop to the window it has, and the pan rate is
+  // metres of ground per pixel, which needs the pixels and not just their ratio
+  C.setViewport(W, H);
+  // How close the orbit may come depends on the focal length, which depends on
+  // the canvas height -- so it moves when the window does. Setting it once at
+  // load let a viewer who made the window taller drive inside the distance the
+  // ladder can answer for.
+  setNearest();
+}
+addEventListener('resize', resize);
+resize();                        // before the ground arrives, so that the
+                                 // overview is framed to the window it has
+
+function frame(now){
+  requestAnimationFrame(frame);
+  if (!man) return;
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  C.step(dt);
+
+  const cam = C.camera();
+  const p = S.proj(W, H, cam.fov, 0.15, 4000);
+  const view = S.lookAt(cam.eye, cam.target, cam.up);
+
+  // choose a level per tile, nearest first so the close ones win the budget
+  const reach = C.streamRadius();
+  const ranked = tiles.map(t => ({t, d: distTo(t, cam.eye)}))
+                      .filter(o => o.d < reach)
+                      .sort((a, b) => a.d - b.d);
+  // A few new fetches a frame, so that a step stays smooth. Counting every
+  // tile looked at rather than every fetch started meant the cap was spent on
+  // the nearest 27 tiles, which were already resident, every frame for ever:
+  // the 28th tile was never asked for at all and the far half of the quad
+  // never arrived unless the walker went to it.
+  // Cap what is outstanding, not what is started per frame. A per-frame cap of
+  // 26 over 285 tiles starts 1,500 fetches a second into a browser that will
+  // run six, and the queue behind them is what makes the tile you are looking
+  // at arrive last.
+  // What each tile should be held at, in distance order because the ceiling is
+  // a running total. Every tile in view gets its `used` refreshed here whether
+  // or not it is fetched below: `used` is what keeps it off the eviction list
+  // and `dist` is what orders the draw budget, and both have to be true of the
+  // tiles the per-frame cap does not reach. Leaving this loop early instead of
+  // skipping the fetch is what made the far tiles age out and be re-fetched for
+  // ever.
+  let ahead = 0, detail = true;
+  // What the budget has left for detail once the floor has taken its share, and
+  // not a gaussian more. The invariant this buys is that every tile in view is
+  // drawn at *some* level: detail is only asked for where the budget can afford
+  // detail, and everywhere else the floor is affordable by construction.
+  //
+  // Asking for more than that is not prefetching, it is holes. The first
+  // version of this fetched 1.6 times the budget on the reasoning that a tile
+  // which has not arrived is a hole, so it is worth keeping tiles ahead of the
+  // walker. That was true before there was a floor and false after: the tile
+  // ahead is already there, blurry, and sharpens when it comes into budget.
+  // What the margin actually did was fetch mid-distance tiles at a *fine* level
+  // the budget could not afford, and a tile carries one level, so there was no
+  // coarse copy to fall back to. Measured at a 1.5 M budget: 2 of the 94 tiles
+  // between 120 and 200 m were drawn, against 126 of the 133 beyond 200 m,
+  // which had never left the floor.
+  const ceiling = Math.max(0, budget - (coarse ? coarse.n : 0));
+  const at = new Map();
+  wantBytes = 0; haveBytes = 0;
+  for (const {t, d} of ranked) {
+    const key = t.x + '_' + t.y;
+    const L = levelFor(Math.max(d, 1), p.fy);
+    // Where the streamer stops wanting detail: past this, the budget could not
+    // draw the sharp copy even if it had it, so what is wanted out here is the
+    // coarse floor and nothing more.
+    ahead += t.counts[L];
+    if (ahead > ceiling) detail = false;
+    const a = detail ? L : (coarse ? coarse.level : -1);
+    at.set(key, a);
+    const cur = resident.get(key);
+    if (cur) { cur.used = now; cur.dist = d; cur.want = a; }
+    if (a < 0) continue;                     // no coarse floor: nothing to hold
+    wantBytes += t.counts[a] * 32;
+    if (cur) haveBytes += cur.buf.length;
+  }
+
+  // And the fetches, in a different order: everything that has nothing in it
+  // first, at the coarse floor, then everything else at the level it wants.
+  //
+  // The order is the whole point and distance order gets it backwards. Walking
+  // the ranked list once, a near tile takes its coarse copy on one frame and
+  // its sharp copy on the next, so twelve tiles at a time are carried all the
+  // way to sharp before the thirteenth is touched -- and the far tiles, whose
+  // coarse copy is 29 kB and is the entire point of having a floor, are reached
+  // last of all. Two lists instead of a phase, so a tile that will not load
+  // cannot hold the sharpening back behind it.
+  let asked = 0;
+  const empty = o => !resident.has(o.t.x + '_' + o.t.y);
+  const fetchOrder = coarse
+    ? ranked.filter(empty).concat(ranked.filter(o => !empty(o)))
+    : ranked;
+  for (const {t, d} of fetchOrder) {
+    if (asked >= 12 || pending.size >= INFLIGHT) break;
+    const key = t.x + '_' + t.y, a = at.get(key);
+    if (a === undefined || a < 0) continue;
+    // a tile with nothing takes the coarse copy, whatever its distance: 29 kB
+    // against two to six megabytes for the same ground at level 0, so the scene
+    // arrives complete and blurry in about the time one sharp tile would have
+    // taken and sharpens from there, instead of assembling out of holes
+    if (want(t, resident.has(key) ? a : (coarse ? coarse.level : a), d)) asked++;
+  }
+  // Rebuilding is an allocation and a copy of budget*32 bytes on the main
+  // thread. At half a million gaussians it did not matter and it ran on every
+  // frame a tile landed on; at twenty million that is the whole frame, so the
+  // first one is immediate and the rest are on a floor.
+  if (dirty && (!nRes || now - lastBuild > REBUILD_MS)) { rebuild(); lastBuild = now; }
+  evict(now);
+
+  if (nRes && !sorting) {
+    sorting = true;
+    sorter.sort([view[2], view[6], view[10]]);
+  }
+  // The ground goes first and owns the clear, because splat-core's own clear
+  // would wipe it. Without a skin in the manifest nothing changes: no ground,
+  // and the splat pass clears as it always did.
+  if (ground) { ground.begin(W, H); ground.draw(view, p); }
+  // Take the model's painted sky away once the eye has climbed above it. From
+  // the walk it is the sky and it stays; from the overview the camera is over
+  // it and would be looking at the campus through it, which is what turned the
+  // whole quad white. C.skyFade is 0 for every camera underneath, so a ladder
+  // with no sky_z measured draws exactly what it always drew.
+  R.setSky(UP, Number.isFinite(C.skyZ) ? C.skyZ : 1e9, C.skyFade);
+  if (order && !onlyGround) R.draw(view, p, W, H, Math.min(order.length, nRes), !ground);
+
+  updateAim(now);
+  if (loading) updateLoad();
+
+  frames++;
+  if (now - tLast > 500) {
+    fps = frames * 1000 / (now - tLast); frames = 0; tLast = now;
+    const lv = {};
+    for (const r of resident.values()) lv[r.level] = (lv[r.level] || 0) + 1;
+    STATS.innerHTML =
+      `<b>${(nRes/1e6).toFixed(2)} M</b> gaussians resident<br>` +
+      `${resident.size} tiles held &middot; levels ` +
+      Object.keys(lv).sort().map(k => `L${k}&times;${lv[k]}`).join(' ') + '<br>' +
+      `<b>${fps.toFixed(0)}</b> fps &middot; ` +
+      (C.mode === 'overview'
+        ? `overview from ${C.orbit.dist.toFixed(0)} m`
+        : `${C.fly ? 'flying' : 'on foot'} at ${C.altitude.toFixed(1)} m<br>` +
+          `x ${C.pos[0].toFixed(0)} y ${C.pos[1].toFixed(0)}`);
+  }
+}
+
+// ---- load --------------------------------------------------------------------
+(async function(){
+  try {
+    man = await (await fetch(TILES + '/manifest.json')).json();
+    if (!man.up || man.up.join() !== UP.join())
+      throw new Error('the manifest says up is ' + JSON.stringify(man.up) +
+                      ' and this page walks about ' + JSON.stringify(UP));
+    tiles = man.tiles;
+    // A procedural ground under the splats, when the build made one. It is
+    // what stops the near field being a field of blobs, and it is gated on the
+    // manifest so a ladder built without one behaves exactly as before.
+    if (man.ground && man.ground.skin && window.WalkGround) {
+      try {
+        ground = await WalkGround.createGround(gl, man, TILES);
+        if (ground) console.log('procedural ground:', ground.n / 3,
+                                'triangles,', ground.classes, 'classes');
+      } catch (e) { console.warn('no procedural ground: ' + e.message); }
+    }
+    if (man.ground) {
+      const g = man.ground;
+      const zb = await (await fetch(TILES + '/' + g.file)).arrayBuffer();
+      const z = new Float32Array(zb);
+      if (z.length !== g.shape[0] * g.shape[1])
+        throw new Error('ground.bin is ' + z.length + ' floats and the ' +
+                        'manifest says ' + g.shape[0] * g.shape[1]);
+      // the terrain, the crop the walker is kept inside, and the z extent the
+      // overview has to frame, all from the manifest rather than from constants
+      let zLo = Infinity, zHi = -Infinity;
+      for (const t of tiles) { zLo = Math.min(zLo, t.min[2]); zHi = Math.max(zHi, t.max[2]); }
+      C.setGround({z, step: g.step_m, crop: g.crop, h: g.shape[0], w: g.shape[1],
+                   zRange: [zLo, zHi]});
+    }
+    // What is solid and what it is called. Both are optional: a ladder built
+    // before scripts/web/05_walk_layer.py existed has neither, and the page
+    // then behaves exactly as it did, with no collision and no index.
+    try {
+      const wl = await fetch(TILES + '/walk_layer.json');
+      if (wl.ok) {
+        const L = await wl.json(), g = L.grid;
+        const raw = new Uint8Array(await (await fetch(TILES + '/' + g.file)).arrayBuffer());
+        const n = g.shape[0] * g.shape[1];
+        if (raw.length !== 2 * n)
+          throw new Error(`${g.file} is ${raw.length} bytes and the manifest ` +
+                          `says two planes of ${n}`);
+        C.setPlaces(L.places);
+        C.setSolid({ident: raw.subarray(0, n), height: raw.subarray(n),
+                    step: g.step_m, crop: g.crop, h: g.shape[0], w: g.shape[1]});
+        // Where the campus stops and the model's backdrop begins. It also
+        // caps the z extent the overview frames: the backdrop reaches z 441
+        // and framing to it pulled the overview back far enough to hold a
+        // column of sky, with the quad a third of the frame.
+        if (Number.isFinite(L.sky_z)) C.setSky(L.sky_z);
+        console.log(`${L.places.length} named buildings, ${g.shape[1]}x${g.shape[0]} ` +
+                    `solid grid at ${g.step_m} m`);
+      }
+    } catch (e) { console.warn('no walk layer: ' + e.message); }
+
+    // the order is not just a count: it is the instance buffer the vertex
+    // shader reads its gaussian index from, so it has to be uploaded, not
+    // merely remembered. Drawing without it asks for n instances from an
+    // attribute buffer that was never filled, which draws nothing at all.
+    sorter = S.createSorter(o => { order = o; R.setOrder(o); sorting = false; });
+    // Open where this page is meant to be looked at from, before a single tile
+    // is asked for -- switching later would have streamed a walk's worth of
+    // near tiles that the bird's-eye never draws.
+    if (VIEW === 'overview') C.setMode('overview');
+    document.body.classList.toggle('birdseye', VIEW === 'overview');
+    // A ladder of coarse tiles cannot answer for a camera closer than its own
+    // finest level is honest at, so do not let anyone drive in there. The
+    // number is the manifest's, not a constant: spacing * focal / tau.
+    setNearest();
+    if (man.levels && man.levels.length)
+      console.log(`finest level ${man.levels[0].spacing_m.toFixed(2)} m, honest ` +
+                  `beyond ${C.nearest.toFixed(0)} m at this size; the orbit stops there`);
+    coarse = pickCoarse();
+    if (coarse) console.log(`coarse floor: level ${coarse.level}, ` +
+                            `${(coarse.n / 1e3).toFixed(0)} k gaussians for the ` +
+                            `whole crop, ${(100 * coarse.n / budget).toFixed(0)}% ` +
+                            'of the budget');
+    C.home();
+    paint();
+    // The frame loop starts behind the bar rather than after it, so the scene
+    // is being drawn while it is being counted and the bar has something to
+    // count. updateLoad() takes the overlay down.
+    requestAnimationFrame(frame);
+  } catch (e) {
+    fail(e.message);
+  }
+})();
+</script>
+</body>
+</html>

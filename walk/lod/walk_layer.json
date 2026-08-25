@@ -1,0 +1,520 @@
+{
+ "sky_z": 268.2,
+ "grid": {
+  "file": "solid.bin",
+  "step_m": 0.5,
+  "crop": [
+   450.0,
+   250.0,
+   900.0,
+   850.0
+  ],
+  "shape": [
+   1200,
+   900
+  ],
+  "planes": [
+   "ident",
+   "height_m"
+  ],
+  "note": "two uint8 planes of shape[0]*shape[1] bytes each, back to back. ident: 0 free, 1..N the place with that id, 255 an unnamed building. height_m: metres of building above the terrain. Both grown by 0.45 m. Row 0 is y = crop[1]."
+ },
+ "places": [
+  {
+   "id": 1,
+   "name": "Roger Adams Laboratory",
+   "at": [
+    886.5,
+    634.7
+   ],
+   "h": 23.8,
+   "area": 15322,
+   "stand": [
+    845.45,
+    623.7
+   ],
+   "yaw": 0.2618
+  },
+  {
+   "id": 2,
+   "name": "Illini Union",
+   "at": [
+    661.9,
+    745.8
+   ],
+   "h": 16.2,
+   "area": 7058,
+   "stand": [
+    714.4,
+    745.8
+   ],
+   "yaw": -3.1416
+  },
+  {
+   "id": 3,
+   "name": "Davenport Hall",
+   "at": [
+    773.5,
+    518.4
+   ],
+   "h": 12.8,
+   "area": 5728,
+   "stand": [
+    823.5,
+    518.4
+   ],
+   "yaw": -3.1416
+  },
+  {
+   "id": 4,
+   "name": "Student Services Arcade Building",
+   "at": [
+    464.5,
+    776.9
+   ],
+   "h": 9.4,
+   "area": 4905,
+   "stand": [
+    531.5,
+    776.9
+   ],
+   "yaw": -3.1416
+  },
+  {
+   "id": 5,
+   "name": "St John's Catholic Newman Center",
+   "at": [
+    472.5,
+    357.0
+   ],
+   "h": 14.9,
+   "area": 4889,
+   "stand": [
+    515.63,
+    362.68
+   ],
+   "yaw": -3.0107
+  },
+  {
+   "id": 6,
+   "name": "Lincoln Hall",
+   "at": [
+    610.4,
+    424.6
+   ],
+   "h": 17.6,
+   "area": 4420,
+   "stand": [
+    664.4,
+    424.6
+   ],
+   "yaw": -3.1416
+  },
+  {
+   "id": 7,
+   "name": "Noyes Laboratory",
+   "at": [
+    769.8,
+    641.4
+   ],
+   "h": 18.7,
+   "area": 4365,
+   "stand": [
+    813.64,
+    685.24
+   ],
+   "yaw": -2.3562
+  },
+  {
+   "id": 8,
+   "name": "Natural History Building",
+   "at": [
+    765.9,
+    760.3
+   ],
+   "h": 19.4,
+   "area": 3675,
+   "stand": [
+    810.52,
+    766.17
+   ],
+   "yaw": -3.0107
+  },
+  {
+   "id": 9,
+   "name": "English Building",
+   "at": [
+    602.3,
+    531.2
+   ],
+   "h": 12.4,
+   "area": 3436,
+   "stand": [
+    652.3,
+    531.2
+   ],
+   "yaw": -3.1416
+  },
+  {
+   "id": 10,
+   "name": "Henry Administration Building",
+   "at": [
+    588.1,
+    618.3
+   ],
+   "h": 17.2,
+   "area": 3288,
+   "stand": [
+    598.17,
+    614.13
+   ],
+   "yaw": 2.7489
+  },
+  {
+   "id": 11,
+   "name": "Illini Union Bookstore",
+   "at": [
+    485.1,
+    597.8
+   ],
+   "h": 16.5,
+   "area": 3235,
+   "stand": [
+    481.58,
+    624.57
+   ],
+   "yaw": -1.4399
+  },
+  {
+   "id": 12,
+   "name": "Literatures, Cultures & Linguistics Building",
+   "at": [
+    783.8,
+    400.8
+   ],
+   "h": 15.3,
+   "area": 2660,
+   "stand": [
+    843.3,
+    400.8
+   ],
+   "yaw": -3.1416
+  },
+  {
+   "id": 13,
+   "name": "Wesley United Methodist Church",
+   "at": [
+    867.0,
+    826.1
+   ],
+   "h": 10.7,
+   "area": 2607,
+   "stand": [
+    842.06,
+    836.43
+   ],
+   "yaw": -0.3927
+  },
+  {
+   "id": 14,
+   "name": "Gregory Hall",
+   "at": [
+    625.4,
+    320.7
+   ],
+   "h": 19.8,
+   "area": 2497,
+   "stand": [
+    683.4,
+    320.7
+   ],
+   "yaw": -3.1416
+  },
+  {
+   "id": 15,
+   "name": "Altgeld Hall",
+   "at": [
+    570.0,
+    725.0
+   ],
+   "h": 15.5,
+   "area": 2210,
+   "stand": [
+    611.0,
+    725.0
+   ],
+   "yaw": -3.1416
+  },
+  {
+   "id": 16,
+   "name": "Smith Memorial Hall",
+   "at": [
+    800.1,
+    339.0
+   ],
+   "h": 16.0,
+   "area": 2074,
+   "stand": [
+    848.68,
+    345.4
+   ],
+   "yaw": -3.0107
+  },
+  {
+   "id": 17,
+   "name": "Psychology Building",
+   "at": [
+    453.2,
+    509.3
+   ],
+   "h": 34.8,
+   "area": 1846,
+   "stand": [
+    495.7,
+    509.3
+   ],
+   "yaw": -3.1416
+  },
+  {
+   "id": 18,
+   "name": "Foellinger Auditorium",
+   "at": [
+    699.9,
+    357.6
+   ],
+   "h": 17.7,
+   "area": 1824,
+   "stand": [
+    741.4,
+    357.6
+   ],
+   "yaw": -3.1416
+  },
+  {
+   "id": 19,
+   "name": "University YMCA",
+   "at": [
+    521.5,
+    413.9
+   ],
+   "h": 10.6,
+   "area": 1062,
+   "stand": [
+    555.71,
+    433.65
+   ],
+   "yaw": -2.618
+  },
+  {
+   "id": 20,
+   "name": "Harker Hall",
+   "at": [
+    714.1,
+    722.4
+   ],
+   "h": 17.5,
+   "area": 880,
+   "stand": [
+    730.36,
+    761.66
+   ],
+   "yaw": -1.9635
+  },
+  {
+   "id": 21,
+   "name": "Coble Hall",
+   "at": [
+    500.6,
+    653.0
+   ],
+   "h": 13.2,
+   "area": 830,
+   "stand": [
+    533.6,
+    653.0
+   ],
+   "yaw": -3.1416
+  },
+  {
+   "id": 22,
+   "name": "IGB Gatehouse",
+   "at": [
+    867.4,
+    272.3
+   ],
+   "h": 9.4,
+   "area": 825,
+   "stand": [
+    858.73,
+    304.66
+   ],
+   "yaw": -1.309
+  },
+  {
+   "id": 23,
+   "name": "Kappa Alpha Theta",
+   "at": [
+    510.5,
+    539.5
+   ],
+   "h": 10.3,
+   "area": 806,
+   "stand": [
+    550.16,
+    544.72
+   ],
+   "yaw": -3.0107
+  },
+  {
+   "id": 24,
+   "name": "University Lutheran Church",
+   "at": [
+    456.5,
+    469.8
+   ],
+   "h": 7.0,
+   "area": 744,
+   "stand": [
+    452.98,
+    443.03
+   ],
+   "yaw": 1.4399
+  },
+  {
+   "id": 25,
+   "name": "Delta Gamma",
+   "at": [
+    880.6,
+    333.0
+   ],
+   "h": 9.5,
+   "area": 657,
+   "stand": [
+    889.53,
+    366.32
+   ],
+   "yaw": -1.8326
+  },
+  {
+   "id": 26,
+   "name": "University of Illinois Observatory",
+   "at": [
+    803.8,
+    281.4
+   ],
+   "h": 4.8,
+   "area": 616,
+   "stand": [
+    795.19,
+    260.61
+   ],
+   "yaw": 1.1781
+  },
+  {
+   "id": 27,
+   "name": "Chi Omega",
+   "at": [
+    513.6,
+    491.7
+   ],
+   "h": 9.9,
+   "area": 596,
+   "stand": [
+    551.1,
+    491.7
+   ],
+   "yaw": -3.1416
+  },
+  {
+   "id": 28,
+   "name": "Alpha Omicron Pi",
+   "at": [
+    869.5,
+    423.6
+   ],
+   "h": 11.9,
+   "area": 560,
+   "stand": [
+    873.87,
+    456.81
+   ],
+   "yaw": -1.7017
+  },
+  {
+   "id": 29,
+   "name": "Pi Beta Phi",
+   "at": [
+    518.8,
+    376.1
+   ],
+   "h": 11.1,
+   "area": 528,
+   "stand": [
+    556.3,
+    376.1
+   ],
+   "yaw": -3.1416
+  },
+  {
+   "id": 30,
+   "name": "Department of Latina/Latino Studies",
+   "at": [
+    891.8,
+    455.7
+   ],
+   "h": 10.8,
+   "area": 490,
+   "stand": [
+    877.07,
+    491.27
+   ],
+   "yaw": -1.1781
+  },
+  {
+   "id": 31,
+   "name": "The Chapel of Saint John the Divine",
+   "at": [
+    529.6,
+    307.0
+   ],
+   "h": 13.0,
+   "area": 481,
+   "stand": [
+    566.31,
+    316.84
+   ],
+   "yaw": -2.8798
+  },
+  {
+   "id": 32,
+   "name": "Channing-Murray Foundation",
+   "at": [
+    860.0,
+    463.5
+   ],
+   "h": 6.8,
+   "area": 346,
+   "stand": [
+    872.63,
+    493.99
+   ],
+   "yaw": -1.9635
+  },
+  {
+   "id": 33,
+   "name": "Bruce D. Nesbitt African American Cultural Center",
+   "at": [
+    869.6,
+    391.1
+   ],
+   "h": 8.0,
+   "area": 343,
+   "stand": [
+    854.85,
+    416.65
+   ],
+   "yaw": -1.0472
+  }
+ ],
+ "source": "building footprints from the 2019 lidar; names from OpenStreetMap (ODbL)"
+}

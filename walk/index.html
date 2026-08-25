@@ -106,7 +106,7 @@
 <body>
 <canvas id="cv"></canvas>
 <div id="hud">
-  <h1>Illinois main quad, on foot</h1>
+  <h1 id="h1">Illinois main quad</h1>
   <div class="sub">tiled gaussian splat, streamed by distance</div>
   <div id="stats"></div>
   <button id="mode" type="button"></button>
@@ -845,6 +845,12 @@ function frame(now){
     // near tiles that the bird's-eye never draws.
     if (VIEW === 'overview') C.setMode('overview');
     document.body.classList.toggle('birdseye', VIEW === 'overview');
+    // The heading said "on foot" whichever view had been opened, which is the
+    // wrong caption on the one that ships.
+    const cap = VIEW === 'overview' ? 'from above' : 'on foot';
+    document.getElementById('h1').textContent = `Illinois main quad, ${cap}`;
+    document.title = VIEW === 'overview' ? 'The Illinois Quad from above'
+                                         : 'Walk the Quad';
     // A ladder of coarse tiles cannot answer for a camera closer than its own
     // finest level is honest at, so do not let anyone drive in there. The
     // number is the manifest's, not a constant: spacing * focal / tau.

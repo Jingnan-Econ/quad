@@ -12,7 +12,8 @@
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;overflow:hidden;background:var(--ground);color:var(--ink);
     font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
-  canvas{display:block;width:100vw;height:100vh;cursor:grab}
+  canvas{display:block;width:100vw;height:100vh;cursor:grab;touch-action:none;
+    -webkit-user-select:none;user-select:none}
   canvas:active{cursor:grabbing}
   #hud{position:fixed;left:14px;top:14px;background:rgba(20,25,31,.86);
     border:1px solid var(--rule);border-radius:9px;padding:11px 13px;
@@ -24,6 +25,8 @@
   #stats b{color:var(--ink);font-weight:500}
   #keys{margin-top:9px;padding-top:8px;border-top:1px solid var(--rule);
     color:var(--faint);font-size:11.5px}
+  .touch-help{display:none}
+  @media (pointer:coarse){.mouse-help{display:none}.touch-help{display:inline}}
   kbd{font:11px ui-monospace,monospace;background:#252C34;border:1px solid var(--rule);
     border-radius:4px;padding:0 4px;color:var(--dim)}
   #load{position:fixed;inset:0;display:grid;place-items:center;background:var(--ground);
@@ -41,8 +44,9 @@
   <h1>Illinois main quad</h1>
   <div class="sub">gaussian splat, trained on renders of the lidar scene</div>
   <div id="stats"></div>
-  <div id="keys">drag orbit &middot; <kbd>shift</kbd>+drag pan &middot; wheel zoom &middot;
-    <kbd>R</kbd> reset</div>
+  <div id="keys"><span class="mouse-help">drag orbit &middot; <kbd>shift</kbd>+drag pan
+    &middot; wheel zoom &middot; <kbd>R</kbd> reset</span><span class="touch-help">one finger
+    orbit &middot; two fingers pan and pinch</span></div>
 </div>
 <div id="load"><div><div>loading splat</div><div class="bar"><i id="pb"></i></div>
   <div id="err"></div></div></div>
@@ -285,31 +289,89 @@ function projMatrix(w,h){
                0,0,-far*near/(far-near),0], fx, fy };
 }
 
-let drag = null;
+const ORBIT_GAIN = 0.005;
+// A fixed number of radians per pixel works on a mouse, whose travel is not
+// bounded by the display, but makes the same gesture progressively weaker as
+// a touchscreen gets narrower. On touch, one full-screen drag always turns the
+// scene by the same amount. The floor preserves the desktop rate on tablets.
+const TOUCH_TURN_PER_SCREEN = 1.5 * Math.PI;
+const TOUCH_PAN_GAIN = 1.6, TOUCH_PINCH_GAIN = 1.35;
+const clampDist = d => Math.max(40, Math.min(2600, d));
+function orbitDrag(dx, dy, type) {
+  const touch = type === 'touch';
+  const gx = touch ? Math.max(ORBIT_GAIN, TOUCH_TURN_PER_SCREEN /
+                              Math.max(CV.clientWidth, 1)) : ORBIT_GAIN;
+  const gy = touch ? Math.max(ORBIT_GAIN, TOUCH_TURN_PER_SCREEN /
+                              Math.max(CV.clientHeight, 1)) : ORBIT_GAIN;
+  yaw -= dx * gx;
+  pitch = Math.max(0.02, Math.min(1.52, pitch + dy * gy));
+}
+function panDrag(dx, dy, gain) {
+  // Slide the ground under the fingers: right and forward in the horizontal
+  // plane, so panning never lifts the target off the terrain.
+  const s = dist * 0.0016 * (gain || 1);
+  const right = [Math.sin(yaw), 0, -Math.cos(yaw)];
+  const fwd = [-Math.cos(yaw), 0, -Math.sin(yaw)];
+  for (let i = 0; i < 3; i++) target[i] += (-dx*right[i] + dy*fwd[i]) * s;
+}
+
+// Keep every pointer rather than treating the latest pointer as the drag. A
+// phone has no wheel or shift key: one finger orbits, while two fingers pan by
+// their midpoint and zoom by their separation, both at the same time.
+const pointers = new Map();
+let drag = null, two = null;
+function span() {
+  const [a, b] = [...pointers.values()];
+  return {d: Math.hypot(a.x - b.x, a.y - b.y),
+          x: (a.x + b.x) / 2, y: (a.y + b.y) / 2};
+}
+function regrasp() {
+  if (pointers.size === 2) {
+    drag = null;
+    two = span();
+  } else {
+    two = null;
+    if (pointers.size === 1) {
+      const p = [...pointers.values()][0];
+      drag = {x:p.x, y:p.y, pan:p.shift || p.button === 1, type:p.type};
+    } else {
+      drag = null;
+    }
+  }
+}
 CV.addEventListener('pointerdown', e => {
+  e.preventDefault();
   CV.setPointerCapture(e.pointerId);
-  drag = {x:e.clientX, y:e.clientY, pan:e.shiftKey || e.button===1};
+  pointers.set(e.pointerId, {x:e.clientX, y:e.clientY, shift:e.shiftKey,
+                             button:e.button, type:e.pointerType});
+  regrasp();
 });
-CV.addEventListener('pointerup', e => { drag = null; });
+const endDrag = e => { pointers.delete(e.pointerId); regrasp(); };
+CV.addEventListener('pointerup', endDrag);
+CV.addEventListener('pointercancel', endDrag);
 CV.addEventListener('pointermove', e => {
+  const p = pointers.get(e.pointerId);
+  if (!p) return;
+  p.x = e.clientX; p.y = e.clientY;
+
+  if (two && pointers.size === 2) {
+    const now = span();
+    const ratio = now.d / (two.d || now.d || 1);
+    if (ratio > 0.02 && ratio < 50)
+      dist = clampDist(dist / Math.pow(ratio, TOUCH_PINCH_GAIN));
+    panDrag(now.x - two.x, now.y - two.y, TOUCH_PAN_GAIN);
+    two = now;
+    return;
+  }
   if (!drag) return;
   const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
   drag.x = e.clientX; drag.y = e.clientY;
-  if (drag.pan) {
-    // slide the ground under the cursor: right and forward in the horizontal
-    // plane, so panning never lifts the target off the terrain
-    const s = dist * 0.0016;
-    const right = [Math.sin(yaw), 0, -Math.cos(yaw)];
-    const fwd = [-Math.cos(yaw), 0, -Math.sin(yaw)];
-    for (let i = 0; i < 3; i++) target[i] += (-dx*right[i] + dy*fwd[i]) * s;
-  } else {
-    yaw -= dx * 0.005;
-    pitch = Math.max(0.02, Math.min(1.52, pitch + dy * 0.005));
-  }
+  if (drag.pan) panDrag(dx, dy, 1);
+  else orbitDrag(dx, dy, drag.type);
 });
 CV.addEventListener('wheel', e => {
   e.preventDefault();
-  dist = Math.max(40, Math.min(2600, dist * Math.exp(e.deltaY * 0.0011)));
+  dist = clampDist(dist * Math.exp(e.deltaY * 0.0011));
 }, {passive:false});
 addEventListener('keydown', e => { if (e.key === 'r' || e.key === 'R') HOME(); });
 

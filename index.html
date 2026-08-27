@@ -293,16 +293,18 @@ const ORBIT_GAIN = 0.005;
 // A fixed number of radians per pixel works on a mouse, whose travel is not
 // bounded by the display, but makes the same gesture progressively weaker as
 // a touchscreen gets narrower. On touch, one full-screen drag always turns the
-// scene by the same amount. The floor preserves the desktop rate on tablets.
-const TOUCH_TURN_PER_SCREEN = 1.5 * Math.PI;
-const TOUCH_PAN_GAIN = 1.6, TOUCH_PINCH_GAIN = 1.35;
+// scene by the same amount. Bound that rate so an unusually narrow or wide
+// viewport does not turn a small motion into a jump or a full-screen haul.
+const TOUCH_TURN_PER_SCREEN = Math.PI;
+const TOUCH_GAIN_MIN = 0.004, TOUCH_GAIN_MAX = 0.009;
+const TOUCH_PAN_GAIN = 1.2, TOUCH_PINCH_GAIN = 1.1;
 const clampDist = d => Math.max(40, Math.min(2600, d));
+const touchGain = extent => Math.max(TOUCH_GAIN_MIN, Math.min(TOUCH_GAIN_MAX,
+                                             TOUCH_TURN_PER_SCREEN / extent));
 function orbitDrag(dx, dy, type) {
   const touch = type === 'touch';
-  const gx = touch ? Math.max(ORBIT_GAIN, TOUCH_TURN_PER_SCREEN /
-                              Math.max(CV.clientWidth, 1)) : ORBIT_GAIN;
-  const gy = touch ? Math.max(ORBIT_GAIN, TOUCH_TURN_PER_SCREEN /
-                              Math.max(CV.clientHeight, 1)) : ORBIT_GAIN;
+  const gx = touch ? touchGain(Math.max(CV.clientWidth, 1)) : ORBIT_GAIN;
+  const gy = touch ? touchGain(Math.max(CV.clientHeight, 1)) : ORBIT_GAIN;
   yaw -= dx * gx;
   pitch = Math.max(0.02, Math.min(1.52, pitch + dy * gy));
 }

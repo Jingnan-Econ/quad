@@ -21,6 +21,11 @@
   #hud{position:fixed;left:14px;top:14px;background:rgba(16,21,27,.86);
     border:1px solid var(--rule);border-radius:9px;padding:11px 13px;
     backdrop-filter:blur(8px);max-width:min(340px,calc(100vw - 28px))}
+  /* The viewer is served both at fengyuan-zhu.com/quad/ and on its own; an
+     absolute link works from either and stops the page being a dead end. */
+  #hud .back{display:block;font-size:11px;letter-spacing:.05em;color:var(--faint);
+    text-decoration:none;margin:0 0 7px}
+  #hud .back:hover,#hud .back:focus-visible{color:var(--accent);outline:0}
   #hud h1{margin:0 0 3px;font-size:14px;font-weight:600}
   #hud .sub{color:var(--faint);font-size:11.5px;margin-bottom:9px}
   #stats{font:11.5px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--dim);
@@ -106,6 +111,7 @@
 <body>
 <canvas id="cv"></canvas>
 <div id="hud">
+  <a class="back" href="https://fengyuan-zhu.com/">&larr; fengyuan-zhu.com</a>
   <h1 id="h1">Illinois main quad</h1>
   <div class="sub">tiled gaussian splat, streamed by distance</div>
   <div id="stats"></div>
